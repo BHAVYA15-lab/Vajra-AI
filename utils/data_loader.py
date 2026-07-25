@@ -187,59 +187,80 @@ def get_pipeline_data():
     - Risk scoring, MITRE mapping, and explanations all computed as array ops
     - Cache correctly separated: artifacts in cache_resource, data in cache_data
     """
-    t0 = time.time()
-    
-    # Step 1: Load artifacts and raw data
-    profiler, scaler, if_model, classifier = load_saved_artifacts()
-    df_merged = load_processed_data()
+    import datetime
+    def ts(label):
+        print(f"[Sentinel-X][{datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]}] {label}", flush=True)
 
-    # Step 2: Feature engineering (sequential, entity-aware — unavoidably iterative)
+    t0 = time.time()
+    ts("START get_pipeline_data()")
+
+    # Step 1: Load artifacts
+    ts("STAGE 1 START — load_saved_artifacts()")
+    profiler, scaler, if_model, classifier = load_saved_artifacts()
+    ts(f"STAGE 1 END — artifacts loaded ({time.time()-t0:.1f}s elapsed)")
+
+    # Step 2: Load raw CSV data
+    ts("STAGE 2 START — load_processed_data()")
+    df_merged = load_processed_data()
+    ts(f"STAGE 2 END — {len(df_merged):,} rows loaded ({time.time()-t0:.1f}s elapsed)")
+
+    # Step 3: Feature engineering (sequential, entity-aware — unavoidably iterative)
+    ts("STAGE 3 START — FeatureEngineer.extract_features()")
     fe = FeatureEngineer(profiler)
     df_features = fe.extract_features(df_merged)
+    ts(f"STAGE 3 END — feature matrix {df_features.shape} ({time.time()-t0:.1f}s elapsed)")
 
-    # Step 3: Stage 1 — Isolation Forest scores ALL rows (fast, vectorized, < 1 second)
+    # Step 4: Stage 1 — Isolation Forest scores ALL rows (fast, vectorized, < 1 second)
+    ts("STAGE 4 START — Isolation Forest scoring")
     X_scaled = scaler.transform(df_features[FEATURE_COLS].values)
     raw_dec = if_model.decision_function(X_scaled)
     raw_anom_scores = np.maximum(0.0, -raw_dec)
+    ts(f"STAGE 4 END — IF scored, {(raw_dec < 0.10).sum():,} candidates ({time.time()-t0:.1f}s elapsed)")
 
-    # Step 4: Classifier predictions — bulk predict, NOT per-row
+    # Step 5: Classifier predictions — bulk predict, NOT per-row
+    ts("STAGE 5 START — Classifier bulk predict()")
     clf_preds_arr = classifier.predict(df_features[FEATURE_COLS].values)
+    ts(f"STAGE 5 END — preds done ({time.time()-t0:.1f}s elapsed)")
 
-    # Step 5: Physics impossible-travel override (vectorized)
+    # Step 6: Physics impossible-travel override (vectorized)
+    ts("STAGE 6 START — Physics override + risk scoring")
     physics_flags = df_features.get("is_physics_impossible_travel",
                                      pd.Series(0.0, index=df_features.index)).values
     clf_preds_arr = np.where(physics_flags > 0, "impossible_travel", clf_preds_arr)
 
-    # Step 6: Vectorized risk scoring
     sev_weights = _vectorized_severity_weights(df_merged["entity_type"], df_merged["resource_accessed"])
     risk_scores_arr, severity_labels_arr = _vectorized_risk_scores(df_features, raw_anom_scores, sev_weights)
 
-    # Physics rule hard overrides on risk/severity
     risk_scores_arr  = np.where(physics_flags > 0, np.maximum(risk_scores_arr, 88), risk_scores_arr)
     severity_labels_arr = np.where(physics_flags > 0, "CRITICAL", severity_labels_arr)
+    ts(f"STAGE 6 END — risk scores done ({time.time()-t0:.1f}s elapsed)")
 
     # Step 7: Vectorized confidence scores
-    # Use classifier predict_proba in one bulk call, take max probability per row
+    ts("STAGE 7 START — Confidence scoring via predict_proba()")
     clf_proba = classifier.predict_proba(df_features[FEATURE_COLS].values)
     conf_scores_arr = np.max(clf_proba, axis=1) * 100.0
-    # Cap cold-start entity confidence at 70%
     cold_mask = (df_features.get("is_cold_start", pd.Series(0.0, index=df_features.index)).values > 0)
     conf_scores_arr = np.where(cold_mask, np.minimum(conf_scores_arr, 70.0), conf_scores_arr)
-    # Physics certainty override
     conf_scores_arr = np.where(physics_flags > 0, 99.9, conf_scores_arr)
     conf_scores_arr = np.round(conf_scores_arr, 1)
+    ts(f"STAGE 7 END — confidence done ({time.time()-t0:.1f}s elapsed)")
 
     # Step 8: MITRE mapping — vectorized via pandas .map() (no loop)
+    ts("STAGE 8 START — MITRE mapping")
     mitre_ids_map  = {k: v["technique_id"] for k, v in MITRE_ATTACK_MAP.items()}
     mitre_name_map = {k: v["technique_name"] for k, v in MITRE_ATTACK_MAP.items()}
     preds_series = pd.Series(clf_preds_arr)
     mitre_ids_arr   = preds_series.map(mitre_ids_map).fillna("T1078").values
     mitre_names_arr = preds_series.map(mitre_name_map).fillna("Valid Accounts (Generic)").values
+    ts(f"STAGE 8 END — MITRE done ({time.time()-t0:.1f}s elapsed)")
 
     # Step 9: Vectorized explanation summaries (no loop)
+    ts("STAGE 9 START — Explanation summaries")
     explanation_summaries_arr = _vectorized_explanation_summaries(df_features)
+    ts(f"STAGE 9 END — summaries done ({time.time()-t0:.1f}s elapsed)")
 
     # Step 10: Assemble scored DataFrame
+    ts("STAGE 10 START — Assembling final DataFrame")
     df_scored = df_merged.copy()
     df_scored["risk_score"]               = risk_scores_arr
     df_scored["confidence_score"]         = conf_scores_arr
@@ -255,7 +276,7 @@ def get_pipeline_data():
     df_scored["implied_velocity_kmh"]     = df_features.get("implied_velocity_kmh", pd.Series(0.0, index=df_features.index)).values
 
     elapsed = time.time() - t0
-    print(f"[Sentinel-X] get_pipeline_data() completed in {elapsed:.1f}s for {len(df_merged):,} events.")
+    ts(f"COMPLETE — get_pipeline_data() finished in {elapsed:.1f}s for {len(df_merged):,} events.")
 
     explainer = SOCAnomalyExplainer(profiler, scaler, classifier)
     return df_scored, df_features, profiler, scaler, if_model, classifier, explainer
