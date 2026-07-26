@@ -140,6 +140,17 @@ Below is the standardized trade-off curve evaluated on the strict temporal test 
 
 ---
 
+### Named Limitation: Asset Severity Bias in Composite Risk Ranking
+
+> [!WARNING]
+> **Explicit Architectural Limitation — Asset Severity Bias**: Under composite Risk Score ranking ($0.40 \times \text{Anomaly} + 0.35 \times \text{Deviation} + 0.25 \times \text{SeverityWeight}$), exactly **10 out of 41 true attacks** do not surface in the top risk tiers even at a 10% alert budget (capping composite risk recall at 75.61%).
+>
+> **Root Cause**: All 10 affected attack events (5 `device_spoofing`, 2 SSH `lateral_movement`, 2 `credential_stuffing`, 1 `brute_force`) occur against standard/low criticality assets (e.g. `/communication/slack/api`, `/jira/board/sprint`, `/api/v1/user/profile`, `ssh:port_22_root`), carrying a `severity_weight` of **0.30** instead of **1.00**. The 25% severity weighting term intentionally deprioritizes these events below normal traffic accessing highly sensitive assets (`/admin/*`, `/db/*`, `/k8s/secrets/*`).
+>
+> **Pure Anomaly Score Comparison**: If events are ranked strictly by raw behavioral anomaly score (ignoring asset severity), these 10 low-asset attacks surface progressively, reaching **80.49% Recall (33/41)** at a 5% budget and **100.0% Recall (41/41)** at a 10% budget. In SOC deployments, composite risk ranking optimizes for severity-weighted operational urgency, whereas raw anomaly ranking optimizes for unweighted behavioral deviation.
+
+---
+
 ### Architectural Trade-Off: Stage 1 Recall Ceiling & Stage 2 Role
 
 > [!NOTE]
@@ -149,13 +160,13 @@ Below is the standardized trade-off curve evaluated on the strict temporal test 
 
 ---
 
-### Static Threshold vs Operational Alert Budget Comparison
+### Ranking Strategy Comparison (Temporal Test Set)
 
-| Evaluation Perspective | Ranking / Cutoff | Flagged Alerts | TP Captured | System Recall | False Positive Rate |
+| Ranking Strategy | 0.5% Budget Recall | **1.0% Budget Recall (HEADLINE)** | 5.0% Budget Recall | 10.0% Budget Recall | Key Characteristic |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Arbitrary Static Cutoff** | Raw IF `dec < -0.05` | 28 alerts | 2 | 4.88% | 0.09% |
-| **Operational Alert Budget (Headline)** | **Composite Risk Top 1.0%** | **276 alerts** | **31** | **75.61%** | **0.89%** |
-| **High-Capacity Alert Budget** | Composite Risk Top 5.0% | 1,378 alerts | 31 | 75.61% | 4.90% |
+| **Composite Risk Score (UI Default)** | **75.61% (31/41)** | **75.61% (31/41)** | **75.61% (31/41)** | **75.61% (31/41)** | Severity-weighted urgency; prioritizes sensitive assets (`/admin/`, `/db/`). |
+| **Raw Behavioral Anomaly Score** | **21.95% (9/41)** | **70.73% (29/41)** | **80.49% (33/41)** | **100.00% (41/41)** | Pure deviation rank; surfaces all low-asset attacks at 10% budget. |
+
 
 
 
