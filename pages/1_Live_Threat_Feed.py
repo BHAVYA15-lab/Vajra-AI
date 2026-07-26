@@ -14,14 +14,14 @@ from theme import inject_theme, render_header, render_pipeline_strip
 from data_loader import get_pipeline_data, record_analyst_feedback, load_analyst_feedback
 
 st.set_page_config(
-    page_title="Sentinel-X | Live Threat Feed",
+    page_title="Vajra AI | Live Threat Feed",
     page_icon="🚨",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 inject_theme()
-render_header(title="Sentinel-X | Live Threat Feed", subtitle="Cascade Pipeline · MITRE ATT&CK Mapping · Risk vs Confidence · Analyst Feedback")
+render_header(title="Vajra AI | Live Threat Feed", subtitle="Cascade Pipeline · MITRE ATT&CK Mapping · Risk vs Confidence · Analyst Feedback")
 render_pipeline_strip(active_step=5)
 
 df_scored, df_features, profiler, scaler, if_model, classifier, explainer = get_pipeline_data()

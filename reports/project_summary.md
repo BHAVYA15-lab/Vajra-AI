@@ -1,6 +1,6 @@
-# Sentinel-X — Cascaded Behavioral Threat Detection & Response
+# Vajra AI — Cascaded Behavioral Threat Detection & Response
 
-> **Product**: Sentinel-X  
+> **Product**: Vajra AI  
 > **Repository Structure**: Domain-Agnostic Behavioral ML Architecture  
 > **Author**: Autonomous Cybersecurity Agent & Pair Programmer  
 

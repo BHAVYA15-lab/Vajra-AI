@@ -1,4 +1,4 @@
-# Sentinel-X — Cascaded Behavioral Threat Detection & Response
+# Vajra AI — Cascaded Behavioral Threat Detection & Response
 ## Benchmark Limitation & Synthetic Evaluation Note
 
 > [!WARNING]

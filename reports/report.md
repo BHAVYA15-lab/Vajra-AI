@@ -1,7 +1,7 @@
-# Sentinel-X — Cascaded Behavioral Threat Detection & Response
+# Vajra AI — Cascaded Behavioral Threat Detection & Response
 ## Technical Report
 
-**Product**: Sentinel-X  
+**Product**: Vajra AI  
 **Architecture**: Staged Cascade Pipeline (Isolation Forest Stage 1 Filter $\rightarrow$ PyTorch LSTM Stage 2 Confirmation $\rightarrow$ Multi-Class Classifier)  
 **Evaluation Standard**: Strict Temporal Train/Test Split (Days 1–21 Training $\rightarrow$ Days 22–30 Testing)  
 

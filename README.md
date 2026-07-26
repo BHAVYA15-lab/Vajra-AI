@@ -1,4 +1,4 @@
-# Sentinel-X — Cascaded Behavioral Threat Detection & Response
+# Vajra AI — Cascaded Behavioral Threat Detection & Response
 
 A domain-agnostic machine learning system that models "normal" access and connection behavior per entity (user, service account, edge device), detects intrusions near real-time via a Staged Cascade Pipeline (Isolation Forest → LSTM Autoencoder), classifies threat categories with MITRE ATT&CK mapping, and provides human-interpretable SOC risk scores and triage recommendations.
 

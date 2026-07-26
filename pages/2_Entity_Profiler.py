@@ -14,14 +14,14 @@ from theme import inject_theme, render_header, render_pipeline_strip
 from data_loader import get_pipeline_data
 
 st.set_page_config(
-    page_title="Sentinel-X | Entity Profiler",
+    page_title="Vajra AI | Entity Profiler",
     page_icon="👤",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 inject_theme()
-render_header(title="Sentinel-X | Entity Profiler", subtitle="Trailing 14-Day Profiles · Exponential Decay · Cold-Start Peer Fallback")
+render_header(title="Vajra AI | Entity Profiler", subtitle="Trailing 14-Day Profiles · Exponential Decay · Cold-Start Peer Fallback")
 render_pipeline_strip(active_step=1)
 
 df_scored, df_features, profiler, scaler, if_model, classifier, explainer = get_pipeline_data()

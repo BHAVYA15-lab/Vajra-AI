@@ -1,5 +1,5 @@
 """
-Sentinel-X: Cascaded Behavioral Threat Detection & Response
+Vajra AI: Cascaded Behavioral Threat Detection & Response
 utils/data_loader.py — Optimized pipeline data loader
 
 PERFORMANCE FIXES (vs. previous version):
@@ -180,7 +180,7 @@ def _vectorized_explanation_summaries(df_feat: pd.DataFrame) -> np.ndarray:
 @st.cache_data
 def get_pipeline_data():
     """
-    Optimized pipeline data loader for Sentinel-X SOC Dashboard.
+    Optimized pipeline data loader for Vajra AI SOC Dashboard.
     
     FIXED performance issues:
     - Replaced 91,805-row Python for-loop with vectorized pandas/numpy operations
@@ -189,7 +189,7 @@ def get_pipeline_data():
     """
     import datetime
     def ts(label):
-        print(f"[Sentinel-X][{datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]}] {label}", flush=True)
+        print(f"[Vajra AI][{datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]}] {label}", flush=True)
 
     t0 = time.time()
     ts("START get_pipeline_data()")

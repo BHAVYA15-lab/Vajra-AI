@@ -386,7 +386,7 @@ def inject_theme():
     """
     st.markdown(theme_css, unsafe_allow_html=True)
 
-def render_header(title="Sentinel-X", subtitle="Cascaded Behavioral Threat Detection & Response"):
+def render_header(title="Vajra AI", subtitle="Cascaded Behavioral Threat Detection & Response"):
     """Renders top header with live pulsing status indicator pill."""
     st.markdown(f"""
     <div class="xai-header">

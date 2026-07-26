@@ -12,7 +12,7 @@ from theme import inject_theme, render_header, render_pipeline_strip
 from data_loader import get_pipeline_data, FEATURE_COLS
 
 st.set_page_config(
-    page_title="Sentinel-X | SOC Security Console",
+    page_title="Vajra AI | SOC Security Console",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -22,7 +22,7 @@ st.set_page_config(
 inject_theme()
 
 # Header & Pipeline Status Strip
-render_header(title="Sentinel-X", subtitle="Cascaded Behavioral Threat Detection & Response")
+render_header(title="Vajra AI", subtitle="Cascaded Behavioral Threat Detection & Response")
 render_pipeline_strip(active_step=5)
 
 # Load pipeline data

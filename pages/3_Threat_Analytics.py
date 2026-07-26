@@ -14,14 +14,14 @@ from theme import inject_theme, render_header, render_pipeline_strip
 from data_loader import get_pipeline_data
 
 st.set_page_config(
-    page_title="Sentinel-X | Threat Analytics",
+    page_title="Vajra AI | Threat Analytics",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 inject_theme()
-render_header(title="Sentinel-X | Threat Analytics", subtitle="Cascade Stage 1 vs Stage 2 Benchmarks · Latency Trade-Offs · Alert Budget Metrics")
+render_header(title="Vajra AI | Threat Analytics", subtitle="Cascade Stage 1 vs Stage 2 Benchmarks · Latency Trade-Offs · Alert Budget Metrics")
 render_pipeline_strip(active_step=2)
 
 df_scored, df_features, profiler, scaler, if_model, classifier, explainer = get_pipeline_data()
