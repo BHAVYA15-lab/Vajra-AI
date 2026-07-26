@@ -1,5 +1,59 @@
 # Vajra AI — Cascaded Behavioral Threat Detection & Response
 
+> **Notice for Reviewers**: Data and trained models are **already included** in this repository (`data/*.csv` and `models/saved/*`). You do **NOT** need to generate datasets or train models from scratch to run the live dashboard.
+
+---
+
+## ⚡ Quick Start (Run Immediately)
+
+Follow these steps to launch the interactive SOC security dashboard locally:
+
+### Step 1: Create & Activate Virtual Environment
+
+**Windows (PowerShell / Command Prompt)**:
+```cmd
+python -m venv venv
+.\venv\Scripts\activate
+```
+
+**Mac / Linux**:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### Step 2: Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### Step 3: Launch Interactive SOC Security Console
+```bash
+python -m streamlit run Home.py
+```
+
+This command will automatically open a browser window at `http://localhost:8501`. **This IS the live interactive SOC security dashboard** — no separate web server or database deployment is required.
+
+---
+
+### 🔧 Troubleshooting Notes
+
+- **Port 8501 Already in Use**:
+  If port 8501 is occupied by another process, launch Streamlit on a different port:
+  ```bash
+  python -m streamlit run Home.py --server.port 8502
+  ```
+
+- **PyTorch Installation Issues / Slowness**:
+  If installing `torch` via requirements takes long or encounters GPU driver errors, force the lightweight CPU-only build:
+  ```bash
+  pip install torch --extra-index-url https://download.pytorch.org/whl/cpu
+  ```
+
+---
+
+## 💡 Executive Summary & Solution Pitch
+
 **Vajra AI** is a domain-agnostic behavioral threat detection platform designed to solve modern Security Operations Center (SOC) alert fatigue. Rather than relying on rigid, easily-evaded IP blacklists or signature keywords, Vajra AI models normal access behavior per entity (users, service accounts, edge devices) over trailing 14-day windows. By combining high-throughput tabular filtering with deep sequence validation in a **two-stage cascade architecture**, the platform catches living-off-the-land intrusions in real time while reducing deep learning compute workloads by **96.88%**. Detected anomalies are mapped directly to official MITRE ATT&CK techniques and presented via an interactive, human-in-the-loop Streamlit SOC console.
 
 ---
@@ -56,31 +110,26 @@
 
 ---
 
-## 🚀 Setup & Execution Workflow
+## 🔬 Advanced: Regenerating Data & Models From Scratch
 
-Run all project components in chronological order from the project root directory:
+If you wish to re-generate synthetic access logs or re-train models from scratch:
 
 ```bash
-# 1. Install Dependencies
-pip install -r requirements.txt
-
-# 2. Generate Synthetic Access Log Dataset (91,805 logs, 175 entities)
+# 1. Generate Synthetic Access Log Dataset (91,805 logs, 175 entities)
 python data_generator/generate_logs.py
 
-# 3. Fit Baseline Profiler & Train Cascade Models (Isolation Forest & PyTorch LSTM)
+# 2. Fit Baseline Profiler & Train Cascade Models (Isolation Forest & PyTorch LSTM)
 python models/detection_model.py
 
-# 4. Train Multi-Class Threat Classifier (Random Forest with class_weight='balanced')
+# 3. Train Multi-Class Threat Classifier (Random Forest with class_weight='balanced')
 python models/classifier.py
 
-# 5. Generate Sample SOC Analyst Explainability Reports
+# 4. Generate Sample SOC Analyst Explainability Reports
 python explainability/explainer.py
 
-# 6. Launch Interactive Streamlit SOC Security Dashboard
+# 5. Launch SOC Dashboard
 python -m streamlit run Home.py
 ```
-
-After running `python -m streamlit run Home.py`, open your browser to `http://localhost:8501`.
 
 ---
 
@@ -110,6 +159,10 @@ After running `python -m streamlit run Home.py`, open your browser to `http://lo
 │   ├── benchmark_limitation.md # Synthetic Separability & Low-Sample Evaluation Caveats
 │   ├── project_summary.md      # High-Level Architecture & Benchmark Summary
 │   └── PPT_SOURCE_CONTENT.md   # 6-Slide Hackathon Presentation Source Content
+├── data/
+│   ├── access_logs.csv        # Pre-generated access logs (91,805 events)
+│   └── ground_truth_labels.csv # Ground-truth attack labels
+├── models/saved/              # Serialized trained model checkpoints
 └── requirements.txt            # Python Dependencies
 ```
 
