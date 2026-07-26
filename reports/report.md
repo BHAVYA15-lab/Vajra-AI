@@ -172,21 +172,35 @@ Below is the standardized trade-off curve evaluated on the strict temporal test 
 
 ---
 
-### Multi-Class Threat Classifier (Balanced Random Forest — Temporal Split)
+### Multi-Class Threat Classification: Hybrid Methodology (Physics + ML)
+
+The system classifies threats using a **hybrid approach**: deterministic physics rules for physically-constrained categories, and a balanced multi-class Random Forest for behavioral categories.
+
+#### 1. Physics-Rule Detection (Deterministic)
+
+| Category | Test N | Implied Velocity Threshold | Detected (TP) | Accuracy | Evaluation Methodology |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `impossible_travel` | **4** | $> 900 \text{ km/h}$ & $> 500 \text{ km}$ | **4 / 4** | **100.0%** | Deterministic Haversine Speed Check ($V = \Delta d / \Delta t$) |
+
+> [!NOTE]
+> **Deterministic Physics Performance**: The physics rule achieved **100% Accuracy (4/4 test events, 8/8 full dataset)** with **0 False Negatives** and **0 False Positives**. All 4 test events exhibited implied velocities between 50,067 km/h and 430,115 km/h (far exceeding commercial flight limits). Because velocity is a geometric fact, this category bypasses ML classification entirely and is hard-coded to Confidence = 99.9% and Severity = CRITICAL.
+>
+> All synthetic `impossible_travel` test events exhibited velocities far above the 900 km/h threshold (range: 50,067–430,115 km/h), reflecting clearly injected anomalies rather than borderline cases. The rule's behavior in the realistic borderline range (approximately 900–5,000 km/h, consistent with long-haul international flights with layovers) has not been empirically tested against this synthetic dataset. The 900 km/h threshold itself is set at commercial flight speed and would need tuning against real-world travel pattern data before production deployment to avoid false positives on legitimate fast international travel.
+
+
+#### 2. Machine-Learning Multi-Class Classifier (Balanced Random Forest — Temporal Split)
 
 > [!IMPORTANT]
-> All test sample sizes shown per-category. Most categories have **N=4–5 test samples** under the strict temporal split. F1 scores for these categories are illustrative only and carry no statistical confidence at this sample size.
+> All test sample sizes shown per-category. Categories with $N < 20$ carry high variance under the strict temporal split and are flagged with low-sample caveats.
 
-| Attack Category | Train N | **Test N** | F1-Score | Support Status |
-| :--- | :--- | :--- | :--- | :--- |
-| `brute_force` | 207 | **4** | 0.889 | ⚠️ LOW-SAMPLE (N=4) |
-| `credential_stuffing` | 36 | **4** | 0.857 | ⚠️ LOW-SAMPLE (N=4) |
-| `device_spoofing` | 45 | **5** | 1.000 | ⚠️ LOW-SAMPLE (N=5) |
-| `impossible_travel` | 4 | **4** | 1.000 | ⚠️ PHYSICS RULE — see caveat below |
-| `lateral_movement` | 40 | **20** | 1.000 | ✅ WELL-SUPPORTED (N=20) |
-| `low_slow_exfiltration` | 36 | **4** | 1.000 | ⚠️ LOW-SAMPLE (N=4) |
+| Attack Category | Train N | **Test N** | Precision | Recall | F1-Score | Support Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `lateral_movement` | 40 | **20** | 1.000 | 1.000 | **1.000** | ✅ WELL-SUPPORTED (N=20) |
+| `device_spoofing` | 45 | **5** | 1.000 | 1.000 | **1.000** | ⚠️ LOW-SAMPLE CAVEAT (N=5) |
+| `brute_force` | 207 | **4** | 0.800 | 1.000 | **0.889** | ⚠️ LOW-SAMPLE CAVEAT (N=4) |
+| `credential_stuffing` | 36 | **4** | 1.000 | 0.750 | **0.857** | ⚠️ LOW-SAMPLE CAVEAT (N=4) |
+| `low_slow_exfiltration` | 36 | **4** | 1.000 | 1.000 | **1.000** | ⚠️ LOW-SAMPLE CAVEAT (N=4) |
 
-**`impossible_travel` — Hybrid Design Caveat**: This category's perfect F1 (1.0) is **not** a reflection of ML generalization from 4 training examples. It reflects the deterministic physics engine (Section 4): any session with implied velocity > 900 km/h is hard-coded to `impossible_travel` with Confidence = 99.9% and Severity = CRITICAL, before the Random Forest sees it. This is a **deliberate hybrid design choice**: physics rules govern physically-constrained, data-scarce categories where geometry provides ground truth; ML governs behaviorally-ambiguous categories with sufficient training data. Reporting the physics-rule result as an ML F1 score would be misleading, so it is separated here.
 
 ### Top 1% Alert Budget Capacity Evaluation
 - **Total Monitored Events**: $91,805$
