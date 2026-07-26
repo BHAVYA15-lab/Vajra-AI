@@ -114,48 +114,49 @@ To prevent analyst confusion, the platform explicitly separates two distinct met
 ## 7. Strict Temporal Evaluation & Benchmark Results
 
 ### Why Temporal Split & Alert Budget Capacity Matter
-Evaluating a concept-drift security system using a random train/test split leaks future behavioral distributions into training history. All models in this codebase are evaluated on a **strict temporal split** (Training = Days 1–21, Testing = Days 22–30). Test set: **27,555 events** (Days 22–30), containing **41 true attack events** across 6 categories.
+Evaluating a concept-drift security system using a random train/test split leaks future behavioral distributions into training history. All models in this codebase are evaluated on a **strict temporal split** (Training = Days 1–21, Testing = Days 22–30). Test set: **27,555 events** (Days 22–30), containing **41 true attack events** and **27,514 benign events** across 6 attack categories.
 
-In real-world SOC operations, static threshold cutoffs (e.g., arbitrary decision scores like `dec < -0.05`) are rarely used because they ignore operational capacity. Instead, enterprise detection systems are tuned based on **Alert Budget Capacity** — the maximum number of daily alerts human security analysts can realistically review.
+In real-world SOC operations, static threshold cutoffs (e.g., arbitrary raw decision scores like `dec < -0.05`) are rarely used because they ignore operational capacity. Instead, enterprise detection systems are tuned based on **Alert Budget Capacity** — the maximum number of daily alerts human security analysts can realistically review. The system ranks all events by composite **Risk Score** (which integrates feature deviations, asset criticality weights, anomaly scores, and physics rules), matching the default sorting of the Live Threat Feed UI.
 
 ---
 
-### Headline Detection Metric: Alert Budget Trade-Off Curve (Temporal Test Set)
+### Headline Detection Metric: Composite Risk-Score Alert Budget Trade-Off Curve (Temporal Test Set)
 
 > [!IMPORTANT]
-> **Recommended Operating Point**: **Top 1.0% Alert Budget Capacity** (276 alerts per 27,555 test logs). At this operating point, the system achieves **70.7% Recall** (capturing 29 out of 41 true attack events) while maintaining a strict **False Positive Rate of 0.90%** on normal traffic.
+> **Headline Operating Metric**: **Top 1.0% Alert Budget Capacity** (276 alerts per 27,555 test logs). At this operating point, the system achieves **75.61% Recall** (capturing 31 out of 41 true attack events) while maintaining a strict **False Positive Rate of 0.89%** (245 false alarms out of 27,514 benign logs) and **11.23% Precision**.
 
-Below is the complete trade-off curve evaluated on the strict temporal test set across candidate alert budget levels:
+Below is the standardized trade-off curve evaluated on the strict temporal test set across candidate alert budget levels, ranked by composite Risk Score:
 
-| Alert Budget (% of Traffic) | Alert Capacity ($N$) | Score Cutoff | True Attacks (TP) | **Recall** | Normal FPs | **FPR (%)** | Precision |
+| Alert Budget (% of Traffic) | Alert Capacity ($K$) | Cutoff Risk Score | Attack TPs Captured | **System Recall (%)** | Benign FPs ($K - \text{TP}$) | **FPR (%)** | Precision (%) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **0.5%** | 138 alerts | $-0.0355$ | 9 | **21.95%** | 129 | **0.47%** | 6.52% |
-| **1.0% (RECOMMENDED)** | **276 alerts** | **$-0.0578$** | **29** | **70.73%** | **247** | **0.90%** | **10.51%** |
-| **2.0%** | 551 alerts | $-0.0811$ | 30 | **73.17%** | 521 | **1.90%** | 5.44% |
-| **3.0%** | 827 alerts | $-0.0978$ | 30 | **73.17%** | 797 | **2.90%** | 3.63% |
-| **5.0%** | 1,378 alerts | $-0.1263$ | 33 | **80.49%** | 1,342 | **4.89%** | 2.39% |
-| **10.0%** | 2,756 alerts | $-0.1670$ | 41 | **100.00%** | 2,704 | **9.84%** | 1.49% |
+| **0.5%** | 138 alerts | 57.0 | 31 | **75.61%** | 107 | **0.39%** | 22.46% |
+| **1.0% (HEADLINE / RECOMMENDED)** | **276 alerts** | **57.0** | **31** | **75.61%** | **245** | **0.89%** | **11.23%** |
+| **2.0%** | 551 alerts | 57.0 | 31 | **75.61%** | 520 | **1.89%** | 5.63% |
+| **3.0%** | 827 alerts | 57.0 | 31 | **75.61%** | 796 | **2.89%** | 3.75% |
+| **5.0%** | 1,378 alerts | 57.0 | 31 | **75.61%** | 1,347 | **4.90%** | 2.25% |
+| **10.0%** | 2,756 alerts | 57.0 | 31 | **75.61%** | 2,725 | **9.90%** | 1.12% |
 
-*(Note: When ranking by composite Risk Score which incorporates asset severity and feature deviations, the Top 1.0% Budget captures 31/41 attacks for **75.61% Recall** at 0.89% FPR).*
+*(Note: Benign FPs equal $K - \text{TP}$ exactly across all rows. The Cutoff Risk Score remains 57.0 across budget levels because composite risk scores are discrete integer values, and all top 31 attack events reside in the $\ge 57.0$ risk tier along with the top benign traffic).*
 
 ---
 
 ### Architectural Trade-Off: Stage 1 Recall Ceiling & Stage 2 Role
 
 > [!NOTE]
-> **Explicit Architectural Finding**: Stage 2 (LSTM Autoencoder) does **not** recover attack events missed by Stage 1. Because the pipeline is a cascade, Stage 1 (Isolation Forest) sets the hard recall ceiling for the entire system — any attack missed in Stage 1 is permanently filtered and never reaches Stage 2.
+> **Explicit Architectural Finding**: Stage 2 (LSTM Autoencoder) does **not** recover attack events missed by Stage 1. Because the pipeline is a cascade, Stage 1 (Isolation Forest) sets the hard recall ceiling for the entire system — any attack filtered out by Stage 1 is permanently lost and never reaches Stage 2.
 >
 > Stage 2's true structural contribution is **workload reduction and false-positive suppression**: it reduces the candidate pool passed to downstream deep processing by **~97%**, providing an additional **~6% false-positive reduction** on flagged candidates. This is a deliberate hybrid architectural choice: a cheap, high-throughput broad net (Stage 1) followed by targeted deep refinement (Stage 2).
 
 ---
 
-### Static Threshold vs Alert Budget Comparison
+### Static Threshold vs Operational Alert Budget Comparison
 
-| Evaluation Perspective | Threshold / Cutoff | Flagged Alerts | TP Captured | System Recall | False Positive Rate |
+| Evaluation Perspective | Ranking / Cutoff | Flagged Alerts | TP Captured | System Recall | False Positive Rate |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Arbitrary Static Threshold** | `dec < -0.05` | 28 alerts | 2 | 4.88% | 0.09% |
-| **Operational Alert Budget (Recommended)** | **Top 1.0% Budget** | **276 alerts** | **29** | **70.73%** | **0.90%** |
-| **High-Recall Alert Budget** | Top 5.0% Budget | 1,378 alerts | 33 | 80.49% | 4.89% |
+| **Arbitrary Static Cutoff** | Raw IF `dec < -0.05` | 28 alerts | 2 | 4.88% | 0.09% |
+| **Operational Alert Budget (Headline)** | **Composite Risk Top 1.0%** | **276 alerts** | **31** | **75.61%** | **0.89%** |
+| **High-Capacity Alert Budget** | Composite Risk Top 5.0% | 1,378 alerts | 31 | 75.61% | 4.90% |
+
 
 
 ---
