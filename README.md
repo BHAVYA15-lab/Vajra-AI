@@ -83,30 +83,30 @@ This command will automatically open a browser window at `http://localhost:8501`
 
 ## 🏗️ System Architecture & Pipeline Flow
 
+```mermaid
+graph TD
+    A["<b>Access Log Stream</b><br/>(91,805 Events)"] --> B["<b>Baseline Profiler</b><br/>(14-Day Trailing EMA, α=0.05)"]
+    B --> C["<b>9D Feature Matrix</b><br/>(Geo, Time, Novelty, Fan-out, etc.)"]
+    C --> D["<b>Stage 1: Isolation Forest</b><br/>(Fast Tabular Filter - All Logs)"]
+    
+    D -- "Inliers (~97% Traffic)" --> E["<b>Safe / Logged</b>"]
+    D -- "Suspicious Candidates (~3%)" --> F["<b>Stage 2: PyTorch LSTM</b><br/>(Sequence Window K=5)"]
+    
+    F --> G["<b>Classifier & Physics Override</b><br/>(Random Forest + Speed Rule)"]
+    G --> H["<b>Risk & MITRE Engine</b><br/>(0-100 Score + ATT&CK Mapping)"]
+    H --> I["<b>Vajra AI Streamlit Console</b><br/>(Interactive Analyst Triage)"]
+
+    style A fill:#141720,stroke:#2e3450,stroke-width:1px,color:#e8eaf2
+    style B fill:#141720,stroke:#2e3450,stroke-width:1px,color:#e8eaf2
+    style C fill:#141720,stroke:#2e3450,stroke-width:1px,color:#e8eaf2
+    style D fill:#1c2030,stroke:#4f7cff,stroke-width:2px,color:#e8eaf2
+    style E fill:#0f1219,stroke:#22d3a4,stroke-width:1px,color:#22d3a4
+    style F fill:#1c2030,stroke:#7b5cf0,stroke-width:2px,color:#e8eaf2
+    style G fill:#1c2030,stroke:#4f7cff,stroke-width:1px,color:#e8eaf2
+    style H fill:#1c2030,stroke:#ff4444,stroke-width:1px,color:#e8eaf2
+    style I fill:#141720,stroke:#22d3a4,stroke-width:2px,color:#22d3a4
 ```
-  [ Access Log Stream ] (91,805 Events)
-           │
-           ▼
-  [ Baseline Profiler ] (14-Day Trailing EMA, α=0.05)
-           │
-           ▼
-  [ 9D Feature Matrix ] (Geo, Time, Novelty, Fan-out, etc.)
-           │
-           ▼
-  [ Stage 1: Isolation Forest ] ──(Inliers ~97%)──► [ Safe / Logged ]
-           │ (Suspicious Candidates ~3%)
-           ▼
-  [ Stage 2: PyTorch LSTM Autoencoder ] (Sequence Window K=5)
-           │
-           ▼
-  [ Multi-Class Random Forest & Physics Engine ]
-           │
-           ▼
-  [ Risk (0-100) & MITRE ATT&CK Mapping Engine ]
-           │
-           ▼
-  [ Vajra AI Streamlit SOC Console ]
-```
+
 
 ---
 
