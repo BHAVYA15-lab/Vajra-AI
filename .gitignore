@@ -10,6 +10,8 @@ env/
 venv/
 .venv/
 ENV/
+fresh_test_env/
+test_clean_venv/
 
 # Agent scratch & logs
 scratch/
