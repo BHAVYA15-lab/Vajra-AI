@@ -135,35 +135,140 @@ if only_cold_start:
 # Ranked by Risk Score Descending by Default
 df_filtered = df_filtered.sort_values(by="risk_score", ascending=False).reset_index(drop=True)
 
-# Header & Download Button Row
-head_c1, head_c2 = st.columns([3, 1])
+# ------------------------------------------------------------------------------
+# LIVE MONITORING MODE TOGGLE
+# Real-time streaming simulation: progressively reveals events sorted by arrival
+# time, mimicking how alerts would surface from a live Kafka/syslog queue.
+# ------------------------------------------------------------------------------
+st.markdown("---")
+lm_left, lm_right = st.columns([3, 1])
 
-with head_c1:
-    st.subheader(f"📋 Live Threat Stream ({len(df_filtered):,} matching sessions)")
+with lm_left:
+    live_mode = st.toggle(
+        "🔴 LIVE Monitoring Mode — stream events as they arrive",
+        value=st.session_state.get("live_mode", False),
+        help="Simulates real-time event streaming by revealing sessions progressively, "
+             "sorted by timestamp, at a pace of 25 events per 2-second refresh."
+    )
+    st.session_state["live_mode"] = live_mode
 
-with head_c2:
-    csv_data = df_filtered.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Export Alerts (CSV)",
-        data=csv_data,
-        file_name="flagged_threat_alerts.csv",
-        mime="text/csv",
-        help="Export current filtered threat view for shift handoff or incident reports."
+with lm_right:
+    if live_mode:
+        if st.button("⏹ Reset Stream", help="Restart stream from beginning"):
+            st.session_state["stream_cursor"] = 0
+            st.session_state["stream_paused"] = False
+            st.rerun()
+        paused = st.session_state.get("stream_paused", False)
+        if st.button("⏸ Pause" if not paused else "▶ Resume"):
+            st.session_state["stream_paused"] = not paused
+            st.rerun()
+
+if live_mode:
+    # Sort ALL scored events by timestamp (arrival order), not risk score
+    df_stream_base = df_scored.sort_values("timestamp", ascending=True).reset_index(drop=True)
+    EVENTS_PER_TICK = 25   # events revealed per 2-second refresh
+    REFRESH_SECS = 2
+
+    if "stream_cursor" not in st.session_state:
+        st.session_state["stream_cursor"] = EVENTS_PER_TICK
+
+    cursor = st.session_state["stream_cursor"]
+    total = len(df_stream_base)
+    paused = st.session_state.get("stream_paused", False)
+
+    # Apply same user filters on the streaming slice
+    df_live_slice = df_stream_base.iloc[:cursor].copy()
+    if selected_etype != "ALL":
+        df_live_slice = df_live_slice[df_live_slice["entity_type"] == selected_etype]
+    if selected_risk == "CRITICAL (85+)":
+        df_live_slice = df_live_slice[df_live_slice["risk_score"] >= 85]
+    elif selected_risk == "HIGH (65-84)":
+        df_live_slice = df_live_slice[(df_live_slice["risk_score"] >= 65) & (df_live_slice["risk_score"] < 85)]
+    elif selected_risk == "MEDIUM (45-64)":
+        df_live_slice = df_live_slice[(df_live_slice["risk_score"] >= 45) & (df_live_slice["risk_score"] < 65)]
+    elif selected_risk == "LOW (<45)":
+        df_live_slice = df_live_slice[df_live_slice["risk_score"] < 45]
+    if selected_attack != "ALL":
+        df_live_slice = df_live_slice[df_live_slice["predicted_attack"] == selected_attack]
+    if search_entity:
+        df_live_slice = df_live_slice[
+            df_live_slice["entity_id"].str.contains(search_entity, case=False) |
+            df_live_slice["source_ip"].str.contains(search_entity, case=False) |
+            df_live_slice["mitre_technique_id"].str.contains(search_entity, case=False)
+        ]
+    if only_cold_start:
+        df_live_slice = df_live_slice[df_live_slice["is_cold_start"] == 1.0]
+
+    # Ranked by risk score within the streamed window
+    df_live_ranked = df_live_slice.sort_values("risk_score", ascending=False)
+
+    pct_complete = min(cursor / total * 100, 100.0)
+    progress_label = (
+        f"🔴 LIVE &nbsp;&nbsp;|&nbsp;&nbsp; "
+        f"Streamed: **{cursor:,}** / **{total:,}** events &nbsp;&nbsp;|&nbsp;&nbsp; "
+        f"Alerts visible: **{len(df_live_ranked):,}** &nbsp;&nbsp;|&nbsp;&nbsp; "
+        f"Progress: **{pct_complete:.1f}%** &nbsp;&nbsp;"
+        + ("&nbsp;&nbsp;⏸ PAUSED" if paused else "")
+    )
+    st.markdown(f"""<div style='background: linear-gradient(90deg,#1a0a0a,#2a1010); border:1px solid #ff4444;
+        border-radius:8px; padding:10px 16px; margin:8px 0; font-size:0.9rem;'>{progress_label}</div>""",
+        unsafe_allow_html=True)
+    st.progress(pct_complete / 100.0)
+
+    # Show the streaming alert table (arrival-time sorted, then risk-ranked within window)
+    st.subheader(f"📡 Live Event Stream — {cursor:,} events ingested, {len(df_live_ranked):,} alerts surfaced")
+    disp_cols_live = [
+        "log_id", "timestamp", "entity_id", "entity_type",
+        "risk_score", "confidence_score", "severity_label",
+        "predicted_attack", "mitre_technique_id", "explanation_summary",
+        "is_cold_start"
+    ]
+    st.dataframe(df_live_ranked[disp_cols_live].head(100), height=300)
+
+    # Advance cursor on next rerun (auto-refresh while not paused and not done)
+    if not paused and cursor < total:
+        st.session_state["stream_cursor"] = min(cursor + EVENTS_PER_TICK, total)
+        import time
+        time.sleep(REFRESH_SECS)
+        st.rerun()
+    elif cursor >= total and not paused:
+        st.success(f"✅ Stream complete — all {total:,} events processed. Toggle off LIVE mode to return to full static view.")
+
+    st.markdown("---")
+    # In live mode, skip the static table below — the stream IS the table
+    df_filtered = df_live_ranked   # keep df_filtered consistent for triage inspector
+else:
+    st.session_state["stream_cursor"] = 0   # reset cursor when live mode is off
+
+# Header & Download Button Row (static mode only shown when not in live mode)
+if not st.session_state.get("live_mode", False):
+    head_c1, head_c2 = st.columns([3, 1])
+    with head_c1:
+        st.subheader(f"📋 Live Threat Stream ({len(df_filtered):,} matching sessions)")
+    with head_c2:
+        csv_data = df_filtered.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Export Alerts (CSV)",
+            data=csv_data,
+            file_name="flagged_threat_alerts.csv",
+            mime="text/csv",
+            help="Export current filtered threat view for shift handoff or incident reports."
+        )
+
+    disp_cols = [
+        "log_id", "timestamp", "entity_id", "entity_type",
+        "risk_score", "confidence_score", "severity_label",
+        "predicted_attack", "mitre_technique_id", "explanation_summary",
+        "geo_location", "resource_accessed", "is_cold_start"
+    ]
+    st.dataframe(
+        df_filtered[disp_cols].head(100),
+        use_container_width=True,
+        height=320
     )
 
-disp_cols = [
-    "log_id", "timestamp", "entity_id", "entity_type", 
-    "risk_score", "confidence_score", "severity_label", 
-    "predicted_attack", "mitre_technique_id", "explanation_summary", 
-    "geo_location", "resource_accessed", "is_cold_start"
-]
-st.dataframe(
-    df_filtered[disp_cols].head(100),
-    use_container_width=True,
-    height=320
-)
-
 st.markdown("---")
+
 
 # ------------------------------------------------------------------------------
 # INTERACTIVE SOC ANALYST TRIAGE CARD INSPECTOR
