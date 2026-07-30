@@ -30,6 +30,10 @@ except Exception as e:
     st.error("⚠️ Loading is taking longer than expected. Please refresh your browser window to reload the pipeline.")
     st.stop()
 
+# Ensure dt_hour is present on df_scored defensively (handles any cache migration edge-cases)
+if "dt_hour" not in df_scored.columns:
+    df_scored["dt_hour"] = pd.to_datetime(df_scored["timestamp"]).dt.hour
+
 # Entity Selection Dropdown
 entity_list = sorted(list(profiler.entity_profiles.keys()))
 selected_eid = st.selectbox("Select Entity ID to Inspect Profile:", entity_list)
@@ -122,7 +126,7 @@ if len(df_ent_logs) >= 10:
     early_logs = df_ent_logs.iloc[:split_idx]
     late_logs = df_ent_logs.iloc[-split_idx:]
 
-    # Use pre-calculated dt_hour for instant rendering
+    # Pre-calculated dt_hour used directly for instant rendering
     early_hours = early_logs["dt_hour"]
     late_hours = late_logs["dt_hour"]
 
