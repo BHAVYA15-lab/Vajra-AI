@@ -24,7 +24,11 @@ inject_theme()
 render_header(title="Vajra AI | Live Threat Feed", subtitle="Cascade Pipeline · MITRE ATT&CK Mapping · Risk vs Confidence · Analyst Feedback")
 render_pipeline_strip(active_step=5)
 
-df_scored, df_features, profiler, scaler, if_model, classifier, explainer = get_pipeline_data()
+try:
+    df_scored, df_features, profiler, scaler, if_model, classifier, explainer = get_pipeline_data()
+except Exception as e:
+    st.error("⚠️ Loading is taking longer than expected. Please refresh your browser window to reload the pipeline.")
+    st.stop()
 
 # ------------------------------------------------------------------------------
 # SUMMARY METRIC PANEL & DEMO NOTE

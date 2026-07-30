@@ -24,7 +24,11 @@ inject_theme()
 render_header(title="Vajra AI | Entity Profiler", subtitle="Trailing 14-Day Profiles · Exponential Decay · Cold-Start Peer Fallback")
 render_pipeline_strip(active_step=1)
 
-df_scored, df_features, profiler, scaler, if_model, classifier, explainer = get_pipeline_data()
+try:
+    df_scored, df_features, profiler, scaler, if_model, classifier, explainer = get_pipeline_data()
+except Exception as e:
+    st.error("⚠️ Loading is taking longer than expected. Please refresh your browser window to reload the pipeline.")
+    st.stop()
 
 # Entity Selection Dropdown
 entity_list = sorted(list(profiler.entity_profiles.keys()))
@@ -118,8 +122,9 @@ if len(df_ent_logs) >= 10:
     early_logs = df_ent_logs.iloc[:split_idx]
     late_logs = df_ent_logs.iloc[-split_idx:]
 
-    early_hours = pd.to_datetime(early_logs["timestamp"]).dt.hour
-    late_hours = pd.to_datetime(late_logs["timestamp"]).dt.hour
+    # Use pre-calculated dt_hour for instant rendering
+    early_hours = early_logs["dt_hour"]
+    late_hours = late_logs["dt_hour"]
 
     fig_drift = go.Figure()
     fig_drift.add_trace(go.Histogram(x=early_hours, name="Early Baseline (First 30% Logs)", opacity=0.6, marker_color="#4f7cff"))

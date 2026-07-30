@@ -1,15 +1,6 @@
 """
 Vajra AI: Cascaded Behavioral Threat Detection & Response
 utils/data_loader.py — Optimized pipeline data loader
-
-PERFORMANCE FIXES (vs. previous version):
-1. The per-row Python loop over 91,805 rows has been eliminated.
-   Risk scores, confidence scores, MITRE info, and explanation summaries
-   are now computed via vectorized pandas operations.
-2. @st.cache_data wraps only the feature engineering step (returns a 
-   DataFrame, which is hashable). The artifact loading uses @st.cache_resource.
-3. get_pipeline_data() is split so that Streamlit never attempts to hash
-   un-hashable sklearn/pytorch objects — those stay in cache_resource.
 """
 
 import os
@@ -47,7 +38,7 @@ SENSITIVE_RESOURCE_PREFIXES = [
 
 @st.cache_resource
 def load_saved_artifacts():
-    """Load pre-trained models and profiler from disk. Executed ONCE per session."""
+    """Load pre-trained models and profiler from disk. Executed ONCE per server lifecycle."""
     saved_dir = os.path.join(PROJECT_ROOT, "models", "saved")
     
     with open(os.path.join(saved_dir, "baseline_profiler.pkl"), "rb") as f:
@@ -177,15 +168,13 @@ def _vectorized_explanation_summaries(df_feat: pd.DataFrame) -> np.ndarray:
 
 # ─── MAIN PIPELINE DATA FUNCTION ───────────────────────────────────────────────
 
-@st.cache_data
+@st.cache_resource
 def get_pipeline_data():
     """
     Optimized pipeline data loader for Vajra AI SOC Dashboard.
     
-    FIXED performance issues:
-    - Replaced 91,805-row Python for-loop with vectorized pandas/numpy operations
-    - Risk scoring, MITRE mapping, and explanations all computed as array ops
-    - Cache correctly separated: artifacts in cache_resource, data in cache_data
+    Uses @st.cache_resource so in-memory DataFrames and ML model singletons
+    are retained in RAM across sessions without serialization overhead.
     """
     import datetime
     def ts(label):
@@ -204,20 +193,20 @@ def get_pipeline_data():
     df_merged = load_processed_data()
     ts(f"STAGE 2 END — {len(df_merged):,} rows loaded ({time.time()-t0:.1f}s elapsed)")
 
-    # Step 3: Feature engineering (sequential, entity-aware — unavoidably iterative)
+    # Step 3: Feature engineering
     ts("STAGE 3 START — FeatureEngineer.extract_features()")
     fe = FeatureEngineer(profiler)
     df_features = fe.extract_features(df_merged)
     ts(f"STAGE 3 END — feature matrix {df_features.shape} ({time.time()-t0:.1f}s elapsed)")
 
-    # Step 4: Stage 1 — Isolation Forest scores ALL rows (fast, vectorized, < 1 second)
+    # Step 4: Stage 1 — Isolation Forest scoring
     ts("STAGE 4 START — Isolation Forest scoring")
     X_scaled = scaler.transform(df_features[FEATURE_COLS].values)
     raw_dec = if_model.decision_function(X_scaled)
     raw_anom_scores = np.maximum(0.0, -raw_dec)
     ts(f"STAGE 4 END — IF scored, {(raw_dec < 0.10).sum():,} candidates ({time.time()-t0:.1f}s elapsed)")
 
-    # Step 5: Classifier predictions — bulk predict, NOT per-row
+    # Step 5: Classifier predictions
     ts("STAGE 5 START — Classifier bulk predict()")
     clf_preds_arr = classifier.predict(df_features[FEATURE_COLS].values)
     ts(f"STAGE 5 END — preds done ({time.time()-t0:.1f}s elapsed)")
@@ -245,7 +234,7 @@ def get_pipeline_data():
     conf_scores_arr = np.round(conf_scores_arr, 1)
     ts(f"STAGE 7 END — confidence done ({time.time()-t0:.1f}s elapsed)")
 
-    # Step 8: MITRE mapping — vectorized via pandas .map() (no loop)
+    # Step 8: MITRE mapping
     ts("STAGE 8 START — MITRE mapping")
     mitre_ids_map  = {k: v["technique_id"] for k, v in MITRE_ATTACK_MAP.items()}
     mitre_name_map = {k: v["technique_name"] for k, v in MITRE_ATTACK_MAP.items()}
@@ -254,7 +243,7 @@ def get_pipeline_data():
     mitre_names_arr = preds_series.map(mitre_name_map).fillna("Valid Accounts (Generic)").values
     ts(f"STAGE 8 END — MITRE done ({time.time()-t0:.1f}s elapsed)")
 
-    # Step 9: Vectorized explanation summaries (no loop)
+    # Step 9: Vectorized explanation summaries
     ts("STAGE 9 START — Explanation summaries")
     explanation_summaries_arr = _vectorized_explanation_summaries(df_features)
     ts(f"STAGE 9 END — summaries done ({time.time()-t0:.1f}s elapsed)")
@@ -274,6 +263,9 @@ def get_pipeline_data():
     df_scored["is_cold_start"]            = df_features.get("is_cold_start", pd.Series(0, index=df_features.index)).values
     df_scored["is_physics_impossible_travel"] = physics_flags
     df_scored["implied_velocity_kmh"]     = df_features.get("implied_velocity_kmh", pd.Series(0.0, index=df_features.index)).values
+    
+    # Pre-calculate datetime hour once to eliminate repeated string parsing on pages
+    df_scored["dt_hour"]                  = pd.to_datetime(df_scored["timestamp"]).dt.hour
 
     elapsed = time.time() - t0
     ts(f"COMPLETE — get_pipeline_data() finished in {elapsed:.1f}s for {len(df_merged):,} events.")
@@ -288,6 +280,7 @@ FEEDBACK_FILE = os.path.join(PROJECT_ROOT, "data", "analyst_feedback.csv")
 
 
 def record_analyst_feedback(log_id, entity_id, predicted_attack, risk_score, decision):
+    """Appends analyst triage decisions directly to CSV. Zero in-memory DataFrame mutation."""
     os.makedirs(os.path.dirname(FEEDBACK_FILE), exist_ok=True)
     file_exists = os.path.exists(FEEDBACK_FILE)
     from datetime import datetime
@@ -299,6 +292,9 @@ def record_analyst_feedback(log_id, entity_id, predicted_attack, risk_score, dec
 
 
 def load_analyst_feedback():
-    if os.path.exists(FEEDBACK_FILE):
+    if not os.path.exists(FEEDBACK_FILE):
+        return pd.DataFrame(columns=["log_id","entity_id","predicted_attack","risk_score","analyst_decision","timestamp"])
+    try:
         return pd.read_csv(FEEDBACK_FILE)
-    return pd.DataFrame(columns=["log_id", "entity_id", "predicted_attack", "risk_score", "analyst_decision", "timestamp"])
+    except Exception:
+        return pd.DataFrame(columns=["log_id","entity_id","predicted_attack","risk_score","analyst_decision","timestamp"])

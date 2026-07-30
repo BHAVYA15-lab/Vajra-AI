@@ -24,7 +24,11 @@ inject_theme()
 render_header(title="Vajra AI | Threat Analytics", subtitle="Cascade Stage 1 vs Stage 2 Benchmarks · Latency Trade-Offs · Alert Budget Metrics")
 render_pipeline_strip(active_step=2)
 
-df_scored, df_features, profiler, scaler, if_model, classifier, explainer = get_pipeline_data()
+try:
+    df_scored, df_features, profiler, scaler, if_model, classifier, explainer = get_pipeline_data()
+except Exception as e:
+    st.error("⚠️ Loading is taking longer than expected. Please refresh your browser window to reload the pipeline.")
+    st.stop()
 
 b_col1, b_col2, b_col3, b_col4 = st.columns(4)
 
