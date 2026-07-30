@@ -220,6 +220,17 @@ python -m streamlit run Home.py
 │   ├── 1_Live_Threat_Feed.py   # Live Threat Stream, 🔴 LIVE Mode, Cold-Start Toggle, Triage Inspector
 │   ├── 2_Entity_Profiler.py    # Entity Baseline Profiler & Concept Drift Inspector
 │   └── 3_Threat_Analytics.py   # Cascade Stage Benchmarks & Alert Budget Analysis
+├── analysis/                   # Standalone verification & metrics scripts (not required to run the app)
+│   ├── analyze_attacks_detail.py
+│   ├── analyze_min_test_effect.py
+│   ├── compute_budget_metrics.py
+│   ├── compute_e2e_recall.py
+│   ├── compute_risk_budget_metrics.py
+│   ├── eval_impossible_travel.py
+│   ├── generate_exact_table.py
+│   ├── test_split_sorting.py
+│   ├── verify_all_6_points.py
+│   └── verify_full_pipeline_physics.py
 ├── models/
 │   ├── baseline_profile.py     # Trailing 14-day EMA Profiler & Cold-Start Peer Fallback
 │   ├── detection_model.py      # Stage 1 Isolation Forest & Stage 2 PyTorch LSTM Autoencoder
@@ -241,7 +252,8 @@ python -m streamlit run Home.py
 │   ├── access_logs.csv        # Pre-generated access logs (91,805 events)
 │   └── ground_truth_labels.csv # Ground-truth attack labels
 ├── models/saved/              # Serialized trained model checkpoints
-└── requirements.txt            # Python Dependencies
+├── requirements.txt            # Cloud-safe flexible dependencies (Streamlit Cloud)
+└── requirements-local.txt      # Exact pinned dependencies for local dev reference
 ```
 
 ---

@@ -1,7 +1,13 @@
+import os, sys
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "models"))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "explainability"))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "utils"))
 import sys, os
-sys.path.insert(0, 'models')
-sys.path.insert(0, 'explainability')
-sys.path.insert(0, 'utils')
+# sys.path handled via PROJECT_ROOT
+# sys.path handled via PROJECT_ROOT
+# sys.path handled via PROJECT_ROOT
 import numpy as np
 import pandas as pd
 import pickle, joblib
@@ -11,8 +17,8 @@ df_scored, df_features, profiler, scaler, if_model, classifier, explainer = get_
 
 # Filter to temporal test set indices
 # In data_loader, df_scored is all 91,805. Let's inspect test set explicitly.
-df_logs   = pd.read_csv('data/access_logs.csv')
-df_labels = pd.read_csv('data/ground_truth_labels.csv')
+df_logs   = pd.read_csv(os.path.join(PROJECT_ROOT, 'data', 'access_logs.csv'))
+df_labels = pd.read_csv(os.path.join(PROJECT_ROOT, 'data', 'ground_truth_labels.csv'))
 df        = df_logs.merge(df_labels, on='log_id')
 
 from detection_model import temporal_split_with_min_test

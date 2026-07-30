@@ -1,12 +1,18 @@
+import os, sys
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "models"))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "explainability"))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "utils"))
 import sys, os
-sys.path.insert(0, 'models')
-sys.path.insert(0, 'explainability')
-sys.path.insert(0, 'utils')
+# sys.path handled via PROJECT_ROOT
+# sys.path handled via PROJECT_ROOT
+# sys.path handled via PROJECT_ROOT
 import pandas as pd
 import numpy as np
 
-df_logs   = pd.read_csv('data/access_logs.csv')
-df_labels = pd.read_csv('data/ground_truth_labels.csv')
+df_logs   = pd.read_csv(os.path.join(PROJECT_ROOT, 'data', 'access_logs.csv'))
+df_labels = pd.read_csv(os.path.join(PROJECT_ROOT, 'data', 'ground_truth_labels.csv'))
 df_merged = df_logs.merge(df_labels, on='log_id')
 df_merged['dt'] = pd.to_datetime(df_merged['timestamp'])
 df_sorted = df_merged.sort_values('dt').reset_index(drop=True)

@@ -1,7 +1,13 @@
+import os, sys
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "models"))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "explainability"))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "utils"))
 import sys, os
-sys.path.insert(0, 'models')
-sys.path.insert(0, 'explainability')
-sys.path.insert(0, 'utils')
+# sys.path handled via PROJECT_ROOT
+# sys.path handled via PROJECT_ROOT
+# sys.path handled via PROJECT_ROOT
 import numpy as np
 import pandas as pd
 import pickle
@@ -20,14 +26,14 @@ ATTACK_LABELS = [
     'impossible_travel','lateral_movement','low_slow_exfiltration'
 ]
 
-df = pd.read_csv('data/access_logs.csv').merge(pd.read_csv('data/ground_truth_labels.csv'), on='log_id')
+df = pd.read_csv(os.path.join(PROJECT_ROOT, 'data', 'access_logs.csv')).merge(pd.read_csv(os.path.join(PROJECT_ROOT, 'data', 'ground_truth_labels.csv')), on='log_id')
 train_idx, test_idx = temporal_split_with_min_test(df, min_test_samples=4, test_ratio=0.30)
 df_test = df.iloc[test_idx].reset_index(drop=True)
 
-with open('models/saved/baseline_profiler.pkl','rb') as f:
+with open(os.path.join(PROJECT_ROOT, 'models', 'saved', 'baseline_profiler.pkl'),'rb') as f:
     profiler = pickle.load(f)
-scaler   = joblib.load('models/saved/scaler.joblib')
-if_model = joblib.load('models/saved/isolation_forest.joblib')
+scaler   = joblib.load(os.path.join(PROJECT_ROOT, 'models', 'saved', 'scaler.joblib'))
+if_model = joblib.load(os.path.join(PROJECT_ROOT, 'models', 'saved', 'isolation_forest.joblib'))
 
 fe = FeatureEngineer(profiler)
 df_test_feat = fe.extract_features(df_test)
@@ -103,7 +109,7 @@ NUM_LAYERS = 2
 K = 5
 
 model = PyTorchLSTMAutoencoder(input_dim=INPUT_DIM, hidden_dim=16)
-model.load_state_dict(torch.load('models/saved/lstm_autoencoder.pt', map_location='cpu'))
+model.load_state_dict(torch.load(os.path.join(PROJECT_ROOT, 'models', 'saved', 'lstm_autoencoder.pt'), map_location='cpu'))
 model.eval()
 
 def build_sequences(X_all, indices, window_size=5):

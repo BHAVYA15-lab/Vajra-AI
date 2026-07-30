@@ -1,7 +1,13 @@
+import os, sys
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "models"))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "explainability"))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "utils"))
 import sys, os
-sys.path.insert(0, 'models')
-sys.path.insert(0, 'explainability')
-sys.path.insert(0, 'utils')
+# sys.path handled via PROJECT_ROOT
+# sys.path handled via PROJECT_ROOT
+# sys.path handled via PROJECT_ROOT
 import numpy as np
 import pandas as pd
 import pickle, joblib
@@ -16,8 +22,8 @@ print("======================================================================")
 print("1. TEMPORAL TRAIN/TEST SPLIT VERIFICATION")
 print("======================================================================")
 
-df_logs   = pd.read_csv('data/access_logs.csv')
-df_labels = pd.read_csv('data/ground_truth_labels.csv')
+df_logs   = pd.read_csv(os.path.join(PROJECT_ROOT, 'data', 'access_logs.csv'))
+df_labels = pd.read_csv(os.path.join(PROJECT_ROOT, 'data', 'ground_truth_labels.csv'))
 df_merged = df_logs.merge(df_labels, on='log_id')
 
 df_merged['dt'] = pd.to_datetime(df_merged['timestamp'])
@@ -44,10 +50,10 @@ print("\n======================================================================"
 print("5. STAGE 1 -> STAGE 2 CASCADE WORKLOAD REDUCTION")
 print("======================================================================")
 
-with open('models/saved/baseline_profiler.pkl','rb') as f:
+with open(os.path.join(PROJECT_ROOT, 'models', 'saved', 'baseline_profiler.pkl'),'rb') as f:
     profiler = pickle.load(f)
-scaler   = joblib.load('models/saved/scaler.joblib')
-if_model = joblib.load('models/saved/isolation_forest.joblib')
+scaler   = joblib.load(os.path.join(PROJECT_ROOT, 'models', 'saved', 'scaler.joblib'))
+if_model = joblib.load(os.path.join(PROJECT_ROOT, 'models', 'saved', 'isolation_forest.joblib'))
 
 fe = FeatureEngineer(profiler)
 df_test_feat = fe.extract_features(df_test)
