@@ -26,7 +26,7 @@ Follow these numbered steps in your terminal. Copy and paste each command exactl
 ### Step 1: Download the Project to Your Computer
 Open your terminal and run:
 ```bash
-git clone [REPLACE WITH YOUR ACTUAL GITHUB REPO URL AFTER CREATING IT]
+git clone https://github.com/BHAVYA15-lab/Vajra-AI.git
 ```
 *What this does:* Downloads a copy of the Vajra AI repository directly onto your computer.
 
