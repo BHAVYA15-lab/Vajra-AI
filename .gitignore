@@ -18,6 +18,10 @@ scratch/
 .system_generated/
 *.log
 
+# Zip packages
+*.zip
+Vajra_AI_Submission.zip
+
 # OS generated files
 .DS_Store
 Thumbs.db
