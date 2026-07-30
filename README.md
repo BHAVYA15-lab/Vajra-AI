@@ -4,6 +4,15 @@
 
 ---
 
+## 🚀 Live Demo
+
+**Try it now in your browser — no installation required:**  
+👉 **[https://vajra-ai.streamlit.app/](https://vajra-ai.streamlit.app/)**
+
+> **Note**: The app may take 30–60 seconds to spin up on your first visit if it has been idle (Streamlit Community Cloud free tier automatically sleeps inactive apps).
+
+---
+
 ## 🛠️ Before You Start (Prerequisites)
 
 If you have never run a code project on your computer before, don't worry! You only need two free, standard software tools installed:
